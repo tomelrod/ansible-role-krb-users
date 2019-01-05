@@ -1,0 +1,6 @@
+---
+krb_admin_user: 'root'
+krb_admin_pass: 'Pa55w0rd'
+
+krb_users: []
+krb_server_dir_data: '{{ krb_dir_data }}'

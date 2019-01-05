@@ -1,0 +1,37 @@
+---
+- name: Include OS-specific variables
+  include_vars: "{{ ansible_os_family }}.yml"
+
+- name: Ensure record keeping directories exists
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0700
+  with_items:
+    - "{{ krb_server_dir_data }}/records/principals"
+    - "{{ krb_server_dir_data }}/records/keys"
+  
+- name: Check if the principal has been created
+  stat:
+    path: "{{ krb_server_dir_data }}/records/principals/{{ item }}"
+  with_items: "{{ krb_users }}"
+  register: krb_user_add
+
+- name: Create user principals
+  command: kadmin -p {{ krb_admin_user }}/admin -w "{{ krb_admin_pass }}" -q "add_principal -randkey {{ item.item }}"
+  when: item.stat.exists == False
+  with_items: "{{ krb_user_add.results }}"
+
+- name: Create user keytabs
+  command: kadmin.local -q 'ktadd -norandkey -k {{ krb_server_dir_data }}/records/keys/{{ item.item }}.keytab {{ item.item }}'
+  when: item.stat.exists == False
+  with_items: "{{ krb_user_add.results }}"
+
+- name: Create records of principals created
+  file:
+    path: "{{ krb_server_dir_data }}/records/principals/{{ item.item }}"
+    state: touch
+  when: item.stat.exists == False
+  with_items: "{{ krb_user_add.results }}"
